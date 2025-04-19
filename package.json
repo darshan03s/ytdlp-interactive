@@ -1,0 +1,15 @@
+{
+  "type": "module",
+  "dependencies": {
+    "@inquirer/prompts": "^7.4.1",
+    "chalk": "^5.4.1",
+    "cheerio": "^1.0.0",
+    "is-url": "^1.2.4",
+    "yocto-spinner": "^0.2.1"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.24.0",
+    "eslint": "^9.24.0",
+    "globals": "^16.0.0"
+  }
+}

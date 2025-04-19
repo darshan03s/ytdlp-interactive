@@ -1,0 +1,7 @@
+downloads-data/
+node_modules/
+shell/
+test/
+*.txt
+pnpm-lock.yaml
+settings.json
