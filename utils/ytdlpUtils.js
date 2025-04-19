@@ -96,8 +96,12 @@ export async function getFormatsFromInfoJson() {
         return formats.map((format) => {
             return {
                 name: format.format,
-                value: format.format_id,
-                description: `Language : ${format.language ? format.language : 'N/A'} | Resolution : ${format.resolution ? format.resolution : 'N/A'} | Video Ext : ${format.video_ext ? format.video_ext : 'N/A'} | Audio Ext : ${format.audio_ext ? format.audio_ext : 'N/A'} | Vcodec : ${format.vcodec ? format.vcodec : 'N/A'} | Acodec : ${format.acodec ? format.acodec : 'N/A'} | VBR : ${format.vbr ? format.vbr : 'N/A'} | ABR : ${format.abr ? format.abr : 'N/A'}`
+                value: {
+                    id: format.format_id,
+                    media: (format.resolution.includes('audio only') || format.format.includes('audio only')) ? 'audio' : 'video',
+                    info: format.format.split(" - ")[1]
+                },
+                description: `Language : ${format.language ?? 'N/A'} | Resolution : ${format.resolution ?? 'N/A'} | Ext: ${format.ext ?? 'N/A'} | Video Ext : ${format.video_ext ?? 'N/A'} | Audio Ext : ${format.audio_ext ?? 'N/A'} | Vcodec : ${format.vcodec ?? 'N/A'} | Acodec : ${format.acodec ?? 'N/A'} | VBR : ${format.vbr ?? 'N/A'} | ABR : ${format.abr ?? 'N/A'}`
             };
         });
     }

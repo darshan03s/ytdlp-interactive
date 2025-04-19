@@ -16,6 +16,7 @@ import {
     updateDefaultFormat,
     updateDefaultDownloadLocation,
     readJson,
+    runCommandWithOutput,
 } from "./utils/appUtils.js";
 
 import { createYoutubePlaylistUrl, createYoutubeVideoUrl, getYoutubePlaylistId, getYoutubeVideoId, isYoutube, isYoutubeVideo } from "./utils/youtubeUtils.js";
@@ -28,6 +29,7 @@ import chalk from "chalk";
 import isUrl from "is-url";
 import { input, select, Separator, confirm } from '@inquirer/prompts';
 import yoctoSpinner from 'yocto-spinner';
+import path from "path";
 
 let PUBLIC_IP;
 
@@ -78,13 +80,6 @@ printDividerWithText('YTDLP-Interactive', 'greenBright', 'yellowBright');
 await init();
 // ----- INIT END -----
 
-// ----- BEGIN INITIALIZE BASE ARGS -----
-args.push(SETTINGS.ytdlp_path);
-args.push('--ffmpeg-location');
-args.push(SETTINGS.ffmpeg_path);
-
-// ----- END INITIALIZE BASE ARGS -----
-
 // ------ BEGIN CHECK IF CONNECTED TO INTERNET -----
 isConnectedToInternet = await isOnline();
 
@@ -133,8 +128,9 @@ async function getAndValidateUserInput(defaultInput = "") {
 
 async function getSelectedFormat() {
     const { allFormats, audioFormats, videoFormats } = await getFormatsFromInfoJson();
-    let formatId = SETTINGS.default_format;
-    console.log(chalk.cyanBright(`Default format: ${formatId === 'bv+ba' ? "Best Video + Best Audio" : formatId}`));
+    let format = SETTINGS.default_format;
+    console.log(chalk.cyanBright(`Default format: ${format === 'bv+ba' ? "Best Video + Best Audio" : format.info}`));
+
     const useDefaultFormat = await confirm({ message: 'Use default format?' });
     if (!useDefaultFormat) {
         const selectedFormat = await select({
@@ -148,14 +144,14 @@ async function getSelectedFormat() {
                 ...videoFormats
             ]
         });
-        formatId = selectedFormat;
+        format = selectedFormat;
         const setDefaultFormat = await confirm({ message: 'Set this format as default?' }, { defaultValue: false });
         if (setDefaultFormat) {
             await updateDefaultFormat(selectedFormat);
             await updateSettings();
         }
     }
-    return formatId;
+    return format;
 }
 
 async function getSelectedDownloadLocation() {
@@ -198,7 +194,8 @@ function updateArgs(pre, val) {
 }
 
 async function startDownload() {
-    console.log('Args: ', args);
+    // console.log('Args: ', args);
+    await runCommandWithOutput(args, true);
 }
 
 
@@ -211,6 +208,13 @@ try {
         console.log(chalk.blueBright(`Extra Commands History: ${SETTINGS.extra_commands_history.length}`));
         console.log(chalk.blueBright(`Downloads History: ${SETTINGS.downloads_history.length}`));
         // ----- END DISPLAY SOME SETTINGS INFO ----- 
+
+        // ----- BEGIN INITIALIZE BASE ARGS -----
+        args = []
+        args.push(SETTINGS.ytdlp_path);
+        args.push('--ffmpeg-location');
+        args.push(SETTINGS.ffmpeg_path);
+        // ----- END INITIALIZE BASE ARGS -----
 
         // ----- BEGIN ENTER URL AND VALIDATE URL ----- 
         console.log();
@@ -245,7 +249,7 @@ try {
         await updateUrlHistory();
         await updateSettings();
 
-        args.push('-load-info-json', INFO_JSON_PATH);
+        args.push('--load-info-json', INFO_JSON_PATH);
         // ----- END CREATE INFO JSON -----
 
         spinner.success("Fetched video metadata.");
@@ -256,21 +260,26 @@ try {
         // ----- BEGIN SELECT FORMAT -----
         console.log();
         const selectedFormat = await getSelectedFormat();
-        console.log(chalk.greenBright(`Selected Format: ${selectedFormat}`));
-        updateArgs('-f', selectedFormat);
+        console.log(chalk.greenBright(`Selected Format: ${typeof (selectedFormat) === 'string' ? selectedFormat : selectedFormat.info}`));
+
+        if (selectedFormat.media === 'audio') {
+            updateArgs('-f', typeof (selectedFormat) === 'string' ? selectedFormat : selectedFormat.id);
+        } else {
+            updateArgs('-f', `${typeof (selectedFormat) === 'string' ? selectedFormat + '+ba' : selectedFormat.id + '+ba'}`);
+        }
         // ----- END SELECT FORMAT -----
 
         // ----- BEGIN SELECT DOWNLOAD LOCATION -----
         const selectedDownloadLocation = await getSelectedDownloadLocation();
         console.log(chalk.greenBright(`Selected Download Location: ${selectedDownloadLocation}`));
-        updateArgs('-o', selectedDownloadLocation);
+        updateArgs('-o', path.join(selectedDownloadLocation, '%(title)s/%(title)s.%(ext)s'));
         // ----- END SELECT DOWNLOAD LOCATION -----
 
         // ----- BEGIN ENTER EXTRA COMMANDS -----
         console.log();
         const extraCommands = await input({ message: 'Enter Extra Commands: ' });
         if (extraCommands.length > 0) {
-            const extraCommandsArr = extraCommands.split(" ");
+            const extraCommandsArr = extraCommands.trim().split(" ");
             args.concat(extraCommandsArr);
         }
         console.log(chalk.greenBright(`Extra Commands: ${extraCommands.length > 0 ? extraCommands : "No extra commands"}`));

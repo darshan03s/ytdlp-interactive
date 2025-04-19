@@ -21,10 +21,9 @@ export function execCommand(cmd) {
     });
 }
 
-export function runCommandWithOutput(cmdArray) {
+export function runCommandWithOutput(cmdArray, log = false) {
     return new Promise((resolve, reject) => {
         const [command, ...args] = cmdArray;
-        // console.log(chalk.yellowBright(`\nRunning command: ${command} ${args.join(' ')}\n`));
         const child = spawn(command, args, {
             shell: false,
             stdio: ['ignore', 'pipe', 'pipe']
@@ -36,14 +35,18 @@ export function runCommandWithOutput(cmdArray) {
         child.stdout.on('data', (data) => {
             const output = data.toString();
             stdout += output;
-            // console.log(output);
+            if (log) {
+                console.log(output);
+            }
         });
 
         child.stderr.on('data', (data) => {
             console.log(chalk.red('STDERR: '));
             const output = data.toString();
             stderr += output;
-            // console.error(chalk.red(output));
+            if (log) {
+                console.error(chalk.red(output));
+            }
         });
 
         child.on('close', code => {
